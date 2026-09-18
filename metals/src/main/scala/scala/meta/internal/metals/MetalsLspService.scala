@@ -224,6 +224,7 @@ abstract class MetalsLspService(
     () => compilers,
     parseTrees(_),
     buildTargets,
+    () => javaHome,
   )(using ec)
 
   val sourceMapper: SourceMapper = SourceMapper(
@@ -916,6 +917,9 @@ abstract class MetalsLspService(
     notebookProvider
       .chooseAndSetBuildTarget(notebookUri.toAbsolutePath)
       .map(_ => ())
+
+  def installNotebookKernel(notebookUri: String): Future[Unit] =
+    notebookProvider.installKernel(notebookUri.toAbsolutePath)
 
   override def didSave(
       params: DidSaveTextDocumentParams

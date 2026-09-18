@@ -1,51 +1,55 @@
 package scala.meta.internal.metals
 
+import ch.epfl.scala.bsp4j as b
+import org.eclipse.lsp4j.{
+  Diagnostic,
+  DidChangeNotebookDocumentParams,
+  DidCloseNotebookDocumentParams,
+  DidOpenNotebookDocumentParams,
+  DidSaveNotebookDocumentParams,
+  Location,
+  MessageType,
+  NotebookCell,
+  NotebookCellKind,
+  NotebookDocumentChangeEventCellStructure,
+  Position,
+  PublishDiagnosticsParams,
+  TextEdit,
+}
+
+import java.util as ju
 import java.net.URI
 import java.nio.file.Paths
-import java.util as ju
 import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
-import scala.util.control.NonFatal
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments.*
-import scala.meta.internal.metals.clients.language.MetalsLanguageClient
-import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
-import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
+import scala.meta.internal.metals.clients.language.{
+  MetalsLanguageClient,
+  MetalsQuickPickItem,
+  MetalsQuickPickParams,
+}
+import scala.meta.internal.metals.notebooks.AlmondKernelInstaller
 import scala.meta.io.AbsolutePath
-import ch.epfl.scala.bsp4j as b
-import org.eclipse.lsp4j.Diagnostic
-import org.eclipse.lsp4j.DidChangeNotebookDocumentParams
-import org.eclipse.lsp4j.DidCloseNotebookDocumentParams
-import org.eclipse.lsp4j.DidOpenNotebookDocumentParams
-import org.eclipse.lsp4j.DidSaveNotebookDocumentParams
-import org.eclipse.lsp4j.Location
-import org.eclipse.lsp4j.NotebookCell
-import org.eclipse.lsp4j.NotebookCellKind
-import org.eclipse.lsp4j.NotebookDocumentChangeEventCellStructure
-import org.eclipse.lsp4j.Position
-import org.eclipse.lsp4j.PublishDiagnosticsParams
-import org.eclipse.lsp4j.TextEdit
-
 import scala.util.chaining.scalaUtilChainingOps
+import scala.util.control.NonFatal
 
 /**
  * Gives Scala notebook cells (`vscode-notebook-cell:` documents, see
  * https://github.com/scalameta/metals-feature-requests/issues/236) cross-cell
- * language support without running any code: [[combinedAdjustments]]
- * concatenates a notebook's cells into one virtual script so a cell can see
- * imports/vals from earlier ones, and [[triggerDiagnostics]] typechecks that
- * concatenation and fans the resulting diagnostics back out per cell.
+ * language support: [[combinedAdjustments]] concatenates a notebook's cells
+ * into one virtual script so a cell can see imports/vals from earlier ones,
+ * and [[triggerDiagnostics]] typechecks that concatenation and fans the
+ * resulting diagnostics back out per cell. Once a notebook is associated
+ * with a real build target (see [[chooseAndSetBuildTarget]]), its cells see
+ * that target's real classpath, and [[installKernel]] can install a real
+ * Jupyter kernel (via Almond) sharing that same classpath, so "Run" actually
+ * executes cells.
  *
  * Each cell gets a synthetic, never-written-to-disk `.sc` path (see
  * [[NotebookProvider.cellPath]]) that is a pure function of its uri, so
  * `toAbsolutePath` can resolve it with no registry lookup.
- *
- * Deliberately out of scope: executing cells, and any project/build-target
- * classpath inside a cell (same non-goals as the design doc at
- * https://github.com/scalameta/metals/issues/4434) — cells only see the
- * standard library, exactly like any other standalone scratch `.sc` file.
  */
 final class NotebookProvider(
     buffers: Buffers,
@@ -59,6 +63,7 @@ final class NotebookProvider(
     // ourselves or those features see a cell that was "never opened".
     parseTrees: AbsolutePath => Future[Unit],
     buildTargets: BuildTargets,
+    javaHome: () => Option[String],
 )(implicit ec: ExecutionContext) {
   import NotebookProvider.*
 
@@ -195,6 +200,58 @@ final class NotebookProvider(
   ): Unit = {
     associate(ipynbPath, target)
     triggerDiagnostics(ipynbPath)
+  }
+
+  /**
+   * Installs a real Jupyter kernel (via Almond) sharing the notebook's
+   * already-associated build target's classpath, so "Run" actually executes
+   * cells against the same dependencies its language features already see.
+   * Requires [[chooseAndSetBuildTarget]]/[[setBuildTarget]] to have already
+   * associated a target — this doesn't pick one itself, since running code
+   * is a bigger commitment than just reading it.
+   */
+  def installKernel(ipynbPath: AbsolutePath): Future[Unit] =
+    associatedTarget.get(ipynbPath) match {
+      case None =>
+        languageClient.showMessage(
+          MessageType.Warning,
+          "This notebook has no associated build target yet. Run \"Choose build target for notebook\" first.",
+        )
+        Future.successful(())
+      case Some(target) =>
+        val targetDisplayName =
+          buildTargets
+            .info(target)
+            .map(_.getDisplayName)
+            .getOrElse(target.getUri)
+        val resolved = for {
+          scalaTarget <- buildTargets.scalaTarget(target)
+          classpathFuture <- buildTargets.fullClasspath(target, Promise())
+        } yield classpathFuture.flatMap { classpath =>
+          AlmondKernelInstaller.install(
+            languageClient,
+            javaHome(),
+            ipynbPath.parent,
+            scalaTarget.scalaVersion,
+            classpath.map(_.toNIO),
+            kernelId = kernelIdFor(ipynbPath),
+            displayName = s"Scala ($targetDisplayName)",
+          )
+        }
+        resolved.getOrElse {
+          languageClient.showMessage(
+            MessageType.Error,
+            s"Could not resolve a classpath for '$targetDisplayName'.",
+          )
+          Future.successful(())
+        }
+    }
+
+  private def kernelIdFor(ipynbPath: AbsolutePath): String = {
+    val name = ipynbPath.filename
+    val dot = name.lastIndexOf('.')
+    val stem = if (dot > 0) name.substring(0, dot) else name
+    s"metals-${stem.replaceAll("[^A-Za-z0-9_-]", "_")}"
   }
 
   private def associate(

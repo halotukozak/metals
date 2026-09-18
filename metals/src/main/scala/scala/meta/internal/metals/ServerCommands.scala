@@ -213,6 +213,18 @@ object ServerCommands {
        |""".stripMargin,
   )
 
+  val InstallNotebookKernel = new ParametrizedCommand[String](
+    "notebook-install-kernel",
+    "Install Jupyter kernel for notebook",
+    """|Installs a real Jupyter kernel (via Almond) for a `.ipynb` notebook,
+       |sharing the classpath of its already-associated build target, so
+       |"Run" actually executes cells. Requires the notebook to already be
+       |associated with a build target (see `notebook-choose-build-target`).
+       |""".stripMargin,
+    """|[uri], uri of the `.ipynb` notebook.
+       |""".stripMargin,
+  )
+
   val RunDoctor = new Command(
     "doctor-run",
     "Run doctor",
@@ -859,6 +871,7 @@ object ServerCommands {
       DisconnectBuildServerAndShutdown,
       ListBuildTargets,
       ChooseNotebookBuildTarget,
+      InstallNotebookKernel,
       ScanWorkspaceSources,
       StartDebugAdapter,
       StartMainClass,
