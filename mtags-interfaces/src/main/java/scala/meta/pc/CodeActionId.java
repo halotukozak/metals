@@ -11,6 +11,7 @@ public class CodeActionId {
   public static final String ImplementAbstractMembers = "ImplementAbstractMembers";
   public static final String ImportMissingSymbol = "ImportMissingSymbol";
   public static final String InlineValue = "InlineValue";
+  public static final String OrganizeImports = "OrganizeImports";
   public static final String InsertInferredType = "InsertInferredType";
   public static final String InsertInferredMethod = "InsertInferredMethod";
   public static final String ConvertToNamedLambdaParameters = "ConvertToNamedLambdaParameters";

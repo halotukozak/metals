@@ -326,15 +326,22 @@ case class JavaPresentationCompiler(
           case Right(edits) => edits
           case Left(error) => throw new DisplayableException(error)
         }
+      case CodeActionId.OrganizeImports =>
+        request(params, util.Collections.emptyList[TextEdit]()) { pc =>
+          new JavaOrganizeImportsProvider(pc, params).textEdits().asJava
+        }
       case _ =>
         CompletableFuture.completedFuture(
           util.Collections.emptyList[TextEdit]()
         )
     }
 
-  override def supportedCodeActions(): util.List[String] = {
-    List(CodeActionId.ChangeVariableType, CodeActionId.InlineValue).asJava
-  }
+  override def supportedCodeActions(): util.List[String] =
+    List(
+      CodeActionId.ChangeVariableType,
+      CodeActionId.InlineValue,
+      CodeActionId.OrganizeImports
+    ).asJava
 
   override def didClose(uri: URI): Unit = ()
 

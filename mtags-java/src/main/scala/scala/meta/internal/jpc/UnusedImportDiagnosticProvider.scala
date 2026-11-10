@@ -31,8 +31,18 @@ private class UnusedImportDiagnosticProvider(
   private val sourcePositions = trees.getSourcePositions()
   private val sourceUri = compile.cu.getSourceFile().toUri()
 
-  def diagnostics(): List[l.Diagnostic] = {
-    val seen = scala.collection.mutable.Set.empty[String]
+  def diagnostics(): List[l.Diagnostic] =
+    unusedImports().map(diagnostic)
+
+  /**
+   * Imports that can be removed: unused, redundant (`java.lang`, same package)
+   * and duplicated ones. Imports that don't compile are never reported.
+   */
+  def unusedImports(): List[ImportTree] = {
+    // `import static a.B.*` and `import a.B` have the same name, but they
+    // import different things, so they are not duplicates of each other.
+    val seen =
+      scala.collection.mutable.Set.empty[(Boolean, Boolean, String)]
 
     val imports = compile.cu
       .getImports()
@@ -44,7 +54,9 @@ private class UnusedImportDiagnosticProvider(
           importTree,
           matchElements(importTree)
         )
-        info.copy(isDuplicate = !seen.add(info.fullName))
+        info.copy(isDuplicate =
+          !seen.add((info.isStatic, info.isWildcard, info.fullName))
+        )
       }
 
     if (imports.isEmpty) Nil
@@ -88,8 +100,7 @@ private class UnusedImportDiagnosticProvider(
                 usedElements.toSet,
                 javadocNames.toSet
               ) =>
-          val importTree = info.tree
-          diagnostic(importTree)
+          info.tree
       }
     }
   }

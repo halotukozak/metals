@@ -70,6 +70,7 @@ final class CodeActionProvider(
     new GenerateEqualsHashCodeToString(javaTrees, buffers),
     new AddMissingReturnStatement(javaTrees, buffers),
     new ChangeVariableType(compilers),
+    new JavaSourceOrganizeImports(compilers),
     new JavaExtractMethodCodeAction(javaTrees, compilers),
   )
 
