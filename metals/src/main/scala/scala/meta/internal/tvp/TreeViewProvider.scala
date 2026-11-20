@@ -1,5 +1,7 @@
 package scala.meta.internal.tvp
 
+import scala.annotation.unused
+
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j as l
@@ -11,7 +13,7 @@ trait TreeViewProvider {
   def init(): Unit = ()
   def reset(): Unit = ()
   def children(
-      params: TreeViewChildrenParams
+      @unused params: TreeViewChildrenParams
   ): MetalsTreeViewChildrenResult = MetalsTreeViewChildrenResult(Array.empty)
   def reveal(
       path: AbsolutePath,
@@ -21,7 +23,7 @@ trait TreeViewProvider {
       params: TreeViewNodeCollapseDidChangeParams
   ): Unit = ()
   def parent(
-      params: TreeViewParentParams
+      @unused params: TreeViewParentParams
   ): TreeViewParentResult = TreeViewParentResult()
   def onVisibilityDidChange(
       params: TreeViewVisibilityDidChangeParams

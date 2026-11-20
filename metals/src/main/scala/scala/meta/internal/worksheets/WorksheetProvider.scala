@@ -166,7 +166,7 @@ class WorksheetProvider(
     evaluateAndPublish(
       path,
       token,
-      _.foreach { toPublish =>
+      _.foreach { _ =>
         if (clientConfig.isInlayHintsRefreshEnabled())
           languageClient.refreshInlayHints()
       },

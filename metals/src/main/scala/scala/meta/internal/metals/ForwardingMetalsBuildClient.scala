@@ -5,6 +5,7 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 
+import scala.annotation.unused
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.Future
 import scala.util.control.NonFatal
@@ -42,8 +43,12 @@ trait LogForwarder {
   def info(message: String): Unit = ()
   def log(message: String): Unit = ()
 
-  def infoWithOrigin(originId: String, message: String): Unit = info(message)
-  def errorWithOrigin(originId: String, message: String): Unit = error(message)
+  def infoWithOrigin(@unused originId: String, message: String): Unit = info(
+    message
+  )
+  def errorWithOrigin(@unused originId: String, message: String): Unit = error(
+    message
+  )
 }
 
 /**

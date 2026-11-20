@@ -9,6 +9,7 @@ import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 
 import scala.annotation.nowarn
+import scala.annotation.unused
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
@@ -228,7 +229,7 @@ class Compilers(
     }
   }
 
-  @nowarn("cat=unused")
+  @nowarn("msg=is never used|unused (explicit|implicit|private)")
   private val idleCompilerEvictionTask: ScheduledFuture[?] =
     sh.scheduleAtFixedRate(
       (() => evictIdleCompilers()): Runnable,
@@ -1879,8 +1880,7 @@ class Compilers(
   }
 
   private def loadProtoCompiler(
-      @nowarn("cat=unused-params")
-      path: AbsolutePath
+      @unused path: AbsolutePath
   ): Option[PresentationCompiler] = {
     Some(protoCompiler)
   }

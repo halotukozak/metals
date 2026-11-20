@@ -2,6 +2,7 @@ package scala.meta.internal.implementation
 
 import java.nio.file.Path
 
+import scala.annotation.unused
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -15,7 +16,7 @@ class InheritanceContext(inheritance: Map[String, Set[ClassLocation]]) {
   def allClassSymbols = inheritance.keySet
 
   def getLocations(symbol: String)(implicit
-      ec: ExecutionContext
+      @unused ec: ExecutionContext
   ): Future[Set[ClassLocation]] =
     Future.successful(getWorkspaceLocations(symbol))
 

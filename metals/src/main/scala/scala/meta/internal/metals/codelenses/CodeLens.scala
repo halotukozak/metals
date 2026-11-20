@@ -1,5 +1,6 @@
 package scala.meta.internal.metals.codelenses
 
+import scala.annotation.unused
 import scala.concurrent.Future
 
 import scala.meta.internal.implementation.TextDocumentWithPath
@@ -11,10 +12,10 @@ trait CodeLens {
   def isEnabled: Boolean
 
   def codeLenses(
-      textDocumentWithPath: TextDocumentWithPath
+      @unused textDocumentWithPath: TextDocumentWithPath
   ): Future[Seq[l.CodeLens]] =
     Future.successful(Seq.empty)
 
-  def codeLenses(path: AbsolutePath): Future[Seq[l.CodeLens]] =
+  def codeLenses(@unused path: AbsolutePath): Future[Seq[l.CodeLens]] =
     Future.successful(Seq.empty)
 }

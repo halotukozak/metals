@@ -3,6 +3,7 @@ package scala.meta.internal.metals.clients.language
 import java.util.concurrent.CompletableFuture
 import javax.annotation.Nullable
 
+import scala.annotation.unused
 import scala.util.Try
 
 import scala.meta.internal.bsp.sync.SyncMode
@@ -53,7 +54,7 @@ trait MetalsLanguageClient extends LanguageClient with TreeViewClient {
   ): CompletableFuture[RawMetalsInputBoxResult]
 
   def showMessageRequest(
-      params: ShowMessageRequestParams,
+      @unused params: ShowMessageRequestParams,
       defaultTo: () => MessageActionItem,
   ): CompletableFuture[MessageActionItem] = {
     CompletableFuture.completedFuture(defaultTo())
